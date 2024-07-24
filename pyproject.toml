@@ -1,0 +1,54 @@
+[tool.poetry]
+name = "ftmq-search"
+version = "0.0.1"
+description = "followthemoney search based on ftmq"
+authors = ["Simon Wörpel <simon.woerpel@pm.me>"]
+license = "AGPL"
+readme = "README.md"
+homepage = "https://github.com/investigativedata/ftmq-search"
+repository = "https://github.com/investigativedata/ftmq-search"
+documentation = "https://github.com/investigativedata/ftmq-search"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+packages = [{include = "ftmq_search"}]
+
+[tool.poetry.scripts]
+ftmqs = "ftmq_search.cli:cli"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/investigativedata/ftmq-search/issues"
+
+
+[tool.poetry.dependencies]
+python = ">=3.11,<4"
+ftmq = "^0.6.8"
+structlog = "^24.4.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.4.3,<9.0.0"
+pytest-cov = ">=4.1,<6.0"
+black = ">=23.11,<25.0"
+isort = "^5.12.0"
+mypy = "^1.7.0"
+pre-commit = "^3.5.0"
+flake8 = ">=6.1,<8.0"
+ipdb = "^0.13.13"
+bump2version = "^1.0.1"
+cloudpickle = ">=2.2.1,<4.0.0"
+pytest-env = "^1.1.1"
+bump-pydantic = ">=0.7,<0.9"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+env = [
+    "DEBUG=1",
+    "NOMENKLATURA_STATEMENT_TABLE=test_table",
+]
