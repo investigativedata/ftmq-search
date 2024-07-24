@@ -21,7 +21,7 @@ from structlog.stdlib import (
 )
 from structlog.stdlib import get_logger as get_raw_logger
 
-from . import settings
+from ftmq_search import settings
 
 
 def get_logger(name: str, *args, **kwargs) -> BoundLogger:

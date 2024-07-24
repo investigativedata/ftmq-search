@@ -1,4 +1,5 @@
 from typing import Iterable
+
 from anystore.mixins import BaseModel
 from ftmq.types import CE
 

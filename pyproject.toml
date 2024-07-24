@@ -26,7 +26,7 @@ ftmqs = "ftmq_search.cli:cli"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4"
-ftmq = "^0.6.8"
+ftmq = "^0.6.9"
 structlog = "^24.4.0"
 
 [tool.poetry.group.dev.dependencies]

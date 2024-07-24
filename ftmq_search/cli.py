@@ -1,13 +1,13 @@
-import orjson
-from rich import print
-from rich.console import Console
 from typing import Annotated, Optional
 
+import orjson
 import typer
+from anystore.io import smart_open, smart_stream
+from ftmq.io import smart_read_proxies
+from rich import print
+from rich.console import Console
 
 from ftmq_search import __version__
-from ftmq.io import smart_read_proxies
-from anystore.io import smart_open, smart_stream
 from ftmq_search.model import EntityDocument
 from ftmq_search.settings import Settings
 from ftmq_search.store import get_store

@@ -1,12 +1,12 @@
 from functools import cache
 from urllib.parse import urlparse
 
+from anystore.util import ensure_uri
+
 from ftmq_search.logging import get_logger
 from ftmq_search.settings import Settings
 from ftmq_search.store.base import BaseStore
 from ftmq_search.store.sqlite import SQliteStore
-from anystore.util import ensure_uri
-
 
 log = get_logger(__name__)
 

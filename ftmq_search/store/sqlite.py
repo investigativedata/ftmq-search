@@ -1,20 +1,20 @@
 """
-SQlite FTS5 
+SQlite FTS5
 """
 
-from normality import normalize
-import orjson
 import sqlite3
-from typing import Iterable
-from ftmq.types import CE
 from functools import cache
+from typing import Iterable
 
+import orjson
+from ftmq.types import CE
+from normality import normalize
 from pydantic import ConfigDict
 
 from ftmq_search.logging import get_logger
 from ftmq_search.model import AutocompleteResult, EntityDocument, EntitySearchResult
-from ftmq_search.store.base import BaseStore
 from ftmq_search.settings import Settings
+from ftmq_search.store.base import BaseStore
 
 settings = Settings()
 
@@ -51,7 +51,9 @@ class SQliteStore(BaseStore):
     def create(self):
         try:
             self.connection.execute(
-                f"CREATE TABLE {self.table_name} (id TEXT, datasets JSON, schema TEXT, countries JSON, caption TEXT, names JSON, proxy JSON)"
+                f"""CREATE TABLE {self.table_name}
+                (id TEXT, datasets JSON, schema TEXT, countries JSON,
+                caption TEXT, names JSON, proxy JSON)"""
             )
             self.connection.execute(
                 f"CREATE INDEX {self.table_name}__ix ON {self.table_name}(id)"
@@ -144,7 +146,7 @@ class SQliteStore(BaseStore):
 
     def autocomplete(self, q: str) -> Iterable[AutocompleteResult]:
         q = normalize(q, lowercase=False) or ""
-        stmt = f"""SELECT * FROM {self.table_name}_names WHERE name LIKE '{q}%' 
+        stmt = f"""SELECT * FROM {self.table_name}_names WHERE name LIKE '{q}%'
         ORDER BY length(name)"""
         for res in self.connection.execute(stmt):
             yield AutocompleteResult(**res)

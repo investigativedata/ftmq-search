@@ -10,7 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from ftmq_search.exceptions import IntegrityError
 from ftmq_search.settings import Settings
 
-
 settings = Settings()
 
 
