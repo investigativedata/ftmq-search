@@ -38,6 +38,7 @@ def get_index_values(proxy: CE, props: list[str] = settings.index_props) -> list
     values = []
     for prop in props:
         values.extend(proxy.get(prop, quiet=True))
+    values.extend(proxy.get_type_values(registry.identifier))
     return values
 
 
@@ -48,6 +49,7 @@ class EntityDocument(BaseModel):
     caption: str = Field(..., examples=["Jane Doe"])
     schema_: str = Field(..., examples=["LegalEntity"], alias="schema")
     datasets: list[str] = Field([], examples=[["us_ofac_sdn"]])
+    countries: list[str] = Field([], examples=[["de"]])
     names: list[str]
     text: str = ""
     proxy: Entity
@@ -70,6 +72,7 @@ class EntityDocument(BaseModel):
             id=proxy.id,
             datasets=list(proxy.datasets),
             schema=proxy.schema.name,
+            countries=proxy.countries,
             caption=proxy.caption,
             names=names,
             text=text,

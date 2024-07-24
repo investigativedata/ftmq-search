@@ -38,7 +38,7 @@ class SQliteStore(BaseStore):
 
     table_name: str = "ftmqs"
     connection: sqlite3.Connection
-    buffer: list[tuple[str, str, str, str, str, str]] = []
+    buffer: list[tuple[str, str, str, str, str, str, str]] = []
     fts_buffer: list[tuple[str, str]] = []
     names_buffer: list[tuple[str, str]] = []
 
@@ -51,7 +51,7 @@ class SQliteStore(BaseStore):
     def create(self):
         try:
             self.connection.execute(
-                f"CREATE TABLE {self.table_name} (id TEXT, datasets JSON, schema TEXT, caption TEXT, names JSON, proxy JSON)"
+                f"CREATE TABLE {self.table_name} (id TEXT, datasets JSON, schema TEXT, countries JSON, caption TEXT, names JSON, proxy JSON)"
             )
             self.connection.execute(
                 f"CREATE INDEX {self.table_name}__ix ON {self.table_name}(id)"
@@ -86,7 +86,8 @@ class SQliteStore(BaseStore):
     def flush(self):
         if self.buffer:
             self.connection.executemany(
-                f"INSERT INTO {self.table_name} VALUES (?, ?, ?, ?, ?, ?)", self.buffer
+                f"INSERT INTO {self.table_name} VALUES (?, ?, ?, ?, ?, ?, ?)",
+                self.buffer,
             )
             self.connection.commit()
         if self.fts_buffer:
@@ -109,6 +110,7 @@ class SQliteStore(BaseStore):
                 doc.id,
                 orjson.dumps(doc.datasets).decode(),
                 doc.schema_,
+                orjson.dumps(doc.countries).decode(),
                 doc.caption,
                 orjson.dumps(doc.names).decode(),
                 doc.proxy.model_dump_json(),
@@ -136,6 +138,7 @@ class SQliteStore(BaseStore):
             score = res.pop("rank")
             res["datasets"] = orjson.loads(res["datasets"])
             res["names"] = orjson.loads(res["names"])
+            res["countries"] = orjson.loads(res["countries"])
             res["proxy"] = orjson.loads(res["proxy"])
             yield EntitySearchResult(score=score, **res)
 

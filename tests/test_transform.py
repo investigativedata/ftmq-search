@@ -10,6 +10,7 @@ def test_transform(donations):
             "caption": "MLPD",
             "schema": "Organization",
             "datasets": ["donations"],
+            "countries": [],
             "names": ["MLPD"],
             "text": "MLPD",
             "proxy": {
