@@ -10,7 +10,7 @@ from ftmq.query import Q
 from ftmq.types import CE
 from normality import normalize
 from pydantic import ConfigDict
-from sqlalchemy import Column, MetaData, Table, Text, Unicode, insert, select, text
+from sqlalchemy import Column, MetaData, Table, Text, Unicode, insert, or_, select, text
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.exc import OperationalError
 
@@ -163,11 +163,28 @@ class SQliteStore(BaseStore):
     def search(self, q: str, query: Q | None = None) -> Iterable[EntitySearchResult]:
         # FIXME
         q = normalize(q, lowercase=False) or ""
-        stmt = text(
-            f"""SELECT s.rank, t.* FROM {self.table_name}_fts s
-        LEFT JOIN {self.table_name} t ON s.id = t.id
-        WHERE s.text MATCH '{q}' ORDER BY s.rank"""
+        stmt = (
+            select(text("rank"), self.table)
+            .join(self.table, self.table.c.id == self.fts_table.c.id)
+            .where(self.fts_table.c.text.match(q))
+            .order_by(text("rank"))
         )
+        if query is not None:
+            if query.dataset_names:
+                stmt = stmt.where(
+                    or_(
+                        self.table.c.datasets.like(f"%#{d}#%")
+                        for d in query.dataset_names
+                    )
+                )
+            if query.schemata_names:
+                stmt = stmt.where(self.table.c.schema.in_(query.schemata_names))
+            if query.countries:
+                stmt = stmt.where(
+                    or_(
+                        self.table.c.countries.like(f"%#{c}#%") for c in query.countries
+                    )
+                )
         with self.engine.connect() as conn:
             for res in conn.execute(stmt):
                 res = dict(res._mapping)
