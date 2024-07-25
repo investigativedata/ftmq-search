@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ftmq-search"
-version = "0.0.1"
+version = "0.0.0"
 description = "followthemoney search based on ftmq"
 authors = ["Simon Wörpel <simon.woerpel@pm.me>"]
 license = "AGPL"
@@ -26,7 +26,7 @@ ftmqs = "ftmq_search.cli:cli"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4"
-ftmq = "^0.6.9"
+ftmq = "^0.6.10"
 structlog = "^24.4.0"
 
 [tool.poetry.group.dev.dependencies]
