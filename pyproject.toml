@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ftmq-search"
-version = "0.0.0"
+version = "0.0.1"
 description = "followthemoney search based on ftmq"
 authors = ["Simon Wörpel <simon.woerpel@pm.me>"]
 license = "AGPL"
