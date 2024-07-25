@@ -4,7 +4,7 @@ from followthemoney.types import registry
 from followthemoney.util import join_text
 from ftmq.model import Entity
 from ftmq.types import CE
-from ftmq.util import get_dehydrated_proxy
+from ftmq.util import get_dehydrated_proxy, make_proxy
 from pydantic import BaseModel, ConfigDict, Field
 
 from ftmq_search.exceptions import IntegrityError
@@ -52,6 +52,9 @@ class EntityDocument(BaseModel):
     names: list[str]
     text: str = ""
     proxy: Entity
+
+    def as_proxy(self) -> CE:
+        return make_proxy(self.proxy.model_dump(by_alias=True))
 
     @classmethod
     def from_proxy(

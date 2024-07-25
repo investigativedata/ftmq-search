@@ -168,6 +168,7 @@ class SQliteStore(BaseStore):
             .join(self.table, self.table.c.id == self.fts_table.c.id)
             .where(self.fts_table.c.text.match(q))
             .order_by(text("rank"))
+            .limit(100)
         )
         if query is not None:
             if query.dataset_names:
@@ -197,7 +198,11 @@ class SQliteStore(BaseStore):
 
     def autocomplete(self, q: str) -> Iterable[AutocompleteResult]:
         q = normalize(q, lowercase=False) or ""
-        stmt = select(self.names_table).where(self.names_table.c.name.ilike(f"{q}%"))
+        stmt = (
+            select(self.names_table)
+            .where(self.names_table.c.name.ilike(f"{q}%"))
+            .limit(100)
+        )
         with self.engine.connect() as conn:
             for id_, name in conn.execute(stmt):
                 yield AutocompleteResult(id=id_, name=name)
