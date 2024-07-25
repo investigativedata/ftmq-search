@@ -2,14 +2,17 @@
 SQlite FTS5
 """
 
-import sqlite3
 from functools import cache
 from typing import Iterable
 
 import orjson
+from ftmq.query import Q
 from ftmq.types import CE
 from normality import normalize
 from pydantic import ConfigDict
+from sqlalchemy import Column, MetaData, Table, Text, Unicode, insert, select, text
+from sqlalchemy.engine import Engine, create_engine
+from sqlalchemy.exc import OperationalError
 
 from ftmq_search.logging import get_logger
 from ftmq_search.model import AutocompleteResult, EntityDocument, EntitySearchResult
@@ -20,88 +23,114 @@ settings = Settings()
 
 log = get_logger(__name__)
 
-
-def dict_factory(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict[str, str]:
-    return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
+KEY_LEN = 255
+VALUE_LEN = 65535
 
 
 @cache
-def get_connection(uri: str = settings.uri) -> sqlite3.Connection:
-    uri = uri.replace("sqlite:///", "")
-    con = sqlite3.connect(uri, uri=True)
-    con.row_factory = dict_factory
-    return con
+def get_metadata() -> MetaData:
+    return MetaData()
+
+
+@cache
+def make_table(name: str = settings.sql_table_name) -> Table:
+    metadata = get_metadata()
+    return Table(
+        name,
+        metadata,
+        Column("id", Unicode(KEY_LEN), primary_key=True, unique=True),
+        Column("datasets", Unicode(VALUE_LEN), index=True),
+        Column("schema", Unicode(KEY_LEN), index=True, nullable=False),
+        Column("countries", Unicode(KEY_LEN), index=True, nullable=False),
+        Column("caption", Unicode(VALUE_LEN), index=True, nullable=False),
+        Column("names", Unicode(VALUE_LEN), index=True, nullable=False),
+        Column("proxy", Text, nullable=False),
+    )
+
+
+@cache
+def make_names_table(name: str = settings.sql_table_name) -> Table:
+    metadata = get_metadata()
+    return Table(
+        f"{name}_names",
+        metadata,
+        Column("id", Unicode(KEY_LEN), nullable=False),
+        Column("name", Unicode(VALUE_LEN), index=True, nullable=False),
+    )
+
+
+@cache
+def make_fts_table(name: str = settings.sql_table_name) -> Table:
+    metadata = get_metadata()
+    return Table(
+        f"{name}_fts",
+        metadata,
+        Column("id", Unicode(KEY_LEN), nullable=False),
+        Column("text", Text(VALUE_LEN), nullable=False),
+    )
+
+
+def to_array(values: list[str]) -> str:
+    if not values:
+        return ""
+    return f"#{'#'.join(values)}#"
+
+
+def from_array(value: str) -> list[str]:
+    return value.strip("#").split("#")
 
 
 class SQliteStore(BaseStore):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    table_name: str = "ftmqs"
-    connection: sqlite3.Connection
+    table_name: str = settings.sql_table_name
+    table: Table
+    names_table: Table
+    fts_table: Table
+    engine: Engine
+
     buffer: list[tuple[str, str, str, str, str, str, str]] = []
     fts_buffer: list[tuple[str, str]] = []
     names_buffer: list[tuple[str, str]] = []
 
     def __init__(self, **data):
-        uri = data.get("uri")
-        data["connection"] = get_connection(uri)
+        uri = data.get("uri", settings.uri)
+        table_name = data.get("table_name", settings.sql_table_name)
+        data["engine"] = create_engine(uri)
+        data["table"] = make_table(table_name)
+        data["names_table"] = make_names_table(table_name)
+        data["fts_table"] = make_fts_table(table_name)
         super().__init__(**data)
         self.create()
 
     def create(self):
-        try:
-            self.connection.execute(
-                f"""CREATE TABLE {self.table_name}
-                (id TEXT, datasets JSON, schema TEXT, countries JSON,
-                caption TEXT, names JSON, proxy JSON)"""
-            )
-            self.connection.execute(
-                f"CREATE INDEX {self.table_name}__ix ON {self.table_name}(id)"
-            )
-            self.connection.execute(
-                f"CREATE INDEX {self.table_name}__sx ON {self.table_name}(schema)"
-            )
-            self.connection.execute(
-                f"CREATE INDEX {self.table_name}__cx ON {self.table_name}(caption)"
-            )
-            self.connection.execute("PRAGMA mmap_size = 30000000000")
-            self.connection.execute(
-                f"CREATE VIRTUAL TABLE {self.table_name}__fts USING fts5(id UNINDEXED, text)"
-            )
-            self.connection.execute(
-                f"CREATE TABLE {self.table_name}_names (id TEXT, name TEXT)"
-            )
-            self.connection.execute(
-                f"CREATE INDEX {self.table_name}_names__nx ON {self.table_name}_names(name)"
-            )
-            self.connection.commit()
-        except sqlite3.OperationalError as e:
-            if f"{self.table_name} already exists" in str(e):
-                return
-            raise e
-
-    def drop(self):
-        self.connection.execute(f"DELETE TABLE IF EXISTS {self.table_name}")
-        self.connection.execute(f"DELETE TABLE IF EXISTS {self.table_name}__fts")
-        self.create()
+        metadata = get_metadata()
+        metadata.create_all(
+            self.engine, tables=[self.table, self.names_table], checkfirst=True
+        )
+        with self.engine.connect() as conn:
+            try:
+                conn.execute(
+                    text(
+                        f"CREATE VIRTUAL TABLE {self.table_name}_fts USING "
+                        "fts5(id UNINDEXED, text)"
+                    )
+                )
+            except OperationalError as e:
+                if "already exists" in str(e):
+                    return
+                raise e
 
     def flush(self):
+        conn = self.engine.connect()
+        tx = conn.begin()
         if self.buffer:
-            self.connection.executemany(
-                f"INSERT INTO {self.table_name} VALUES (?, ?, ?, ?, ?, ?, ?)",
-                self.buffer,
-            )
-            self.connection.commit()
-        if self.fts_buffer:
-            self.connection.executemany(
-                f"INSERT INTO {self.table_name}__fts VALUES (?, ?)", self.fts_buffer
-            )
-            self.connection.commit()
+            conn.execute(insert(self.table).values(self.buffer))
         if self.names_buffer:
-            self.connection.executemany(
-                f"INSERT INTO {self.table_name}_names VALUES (?, ?)", self.names_buffer
-            )
-            self.connection.commit()
+            conn.execute(insert(self.names_table).values(self.names_buffer))
+        if self.fts_buffer:
+            conn.execute(insert(self.fts_table).values(self.fts_buffer))
+        tx.commit()
         self.buffer = []
         self.fts_buffer = []
         self.names_buffer = []
@@ -110,11 +139,11 @@ class SQliteStore(BaseStore):
         self.buffer.append(
             (
                 doc.id,
-                orjson.dumps(doc.datasets).decode(),
+                to_array(doc.datasets),
                 doc.schema_,
-                orjson.dumps(doc.countries).decode(),
+                to_array(doc.countries),
                 doc.caption,
-                orjson.dumps(doc.names).decode(),
+                to_array(doc.names),
                 doc.proxy.model_dump_json(),
             )
         )
@@ -131,22 +160,27 @@ class SQliteStore(BaseStore):
         self.flush()
         return res
 
-    def search(self, q: str) -> Iterable[EntitySearchResult]:
+    def search(self, q: str, query: Q | None = None) -> Iterable[EntitySearchResult]:
+        # FIXME
         q = normalize(q, lowercase=False) or ""
-        stmt = f"""SELECT s.rank, t.* FROM {self.table_name}__fts s
+        stmt = text(
+            f"""SELECT s.rank, t.* FROM {self.table_name}_fts s
         LEFT JOIN {self.table_name} t ON s.id = t.id
-        WHERE s.text MATCH ? ORDER BY s.rank"""
-        for res in self.connection.execute(stmt, (q,)):
-            score = res.pop("rank")
-            res["datasets"] = orjson.loads(res["datasets"])
-            res["names"] = orjson.loads(res["names"])
-            res["countries"] = orjson.loads(res["countries"])
-            res["proxy"] = orjson.loads(res["proxy"])
-            yield EntitySearchResult(score=score, **res)
+        WHERE s.text MATCH '{q}' ORDER BY s.rank"""
+        )
+        with self.engine.connect() as conn:
+            for res in conn.execute(stmt):
+                res = dict(res._mapping)
+                score = res.pop("rank")
+                res["datasets"] = from_array(res["datasets"])
+                res["names"] = from_array(res["names"])
+                res["countries"] = from_array(res["countries"])
+                res["proxy"] = orjson.loads(res["proxy"])
+                yield EntitySearchResult(score=score, **res)
 
     def autocomplete(self, q: str) -> Iterable[AutocompleteResult]:
         q = normalize(q, lowercase=False) or ""
-        stmt = f"""SELECT * FROM {self.table_name}_names WHERE name LIKE '{q}%'
-        ORDER BY length(name)"""
-        for res in self.connection.execute(stmt):
-            yield AutocompleteResult(**res)
+        stmt = select(self.names_table).where(self.names_table.c.name.ilike(f"{q}%"))
+        with self.engine.connect() as conn:
+            for id_, name in conn.execute(stmt):
+                yield AutocompleteResult(id=id_, name=name)

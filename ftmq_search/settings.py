@@ -10,5 +10,6 @@ class Settings(BaseSettings):
     display_props: list[str] = []
     index_props: list[str] = []
     name_props: list[str] = []
+    sql_table_name: str = "ftmqs"
 
     debug: bool = False

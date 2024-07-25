@@ -1,6 +1,7 @@
 from typing import Iterable
 
 from anystore.mixins import BaseModel
+from ftmq.query import Q
 from ftmq.types import CE
 
 from ftmq_search.logging import get_logger
@@ -37,7 +38,7 @@ class BaseStore(BaseModel):
                 log.info(f"Loading proxy `{ix}` ...", uri=self.uri)
         return ix
 
-    def search(self, q: str) -> Iterable[EntitySearchResult]:
+    def search(self, q: str, query: Q | None = None) -> Iterable[EntitySearchResult]:
         raise NotImplementedError
 
     def autocomplete(self, q: str) -> Iterable[AutocompleteResult]:
