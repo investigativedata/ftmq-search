@@ -1,10 +1,10 @@
 from ftmq.query import Query
 
 from ftmq_search.store import get_store
+from ftmq_search.store.base import BaseStore
 
 
-def test_store_sqlite(donations, tmp_path):
-    store = get_store(uri="sqlite:///" + str(tmp_path / "ftmqs.db"))
+def _test_store(donations, store: BaseStore):
     store.build(donations)
     res = [r for r in store.search("metall")]
     assert len(res) == 3
@@ -27,6 +27,9 @@ def test_store_sqlite(donations, tmp_path):
     q = Query().where(dataset="donations", schema="Organization")
     res = [r for r in store.search("metall", q)]
     assert len(res) == 3
+    q = Query().where(dataset="foo", schema="Organization")
+    res = [r for r in store.search("metall", q)]
+    assert len(res) == 0
     q = Query().where(dataset="donations", schema="Person")
     res = [r for r in store.search("metall", q)]
     assert len(res) == 0
@@ -37,3 +40,15 @@ def test_store_sqlite(donations, tmp_path):
     q = Query().where(country="gb")
     res = [r for r in store.search("metall", q)]
     assert len(res) == 0
+
+    return True
+
+
+def test_store_sqlite(donations, tmp_path):
+    store = get_store(uri="sqlite:///" + str(tmp_path / "ftmqs.db"))
+    assert _test_store(donations, store)
+
+
+def test_store_elastic(donations):
+    store = get_store(uri="http://localhost:9200")
+    assert _test_store(donations, store)

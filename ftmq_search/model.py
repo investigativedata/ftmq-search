@@ -82,7 +82,9 @@ class EntityDocument(BaseModel):
         )
 
 
-class EntitySearchResult(EntityDocument):
+class EntitySearchResult(BaseModel):
+    id: str = Field(..., examples=["NK-A7z...."])
+    proxy: Entity
     score: float = 1
 
 

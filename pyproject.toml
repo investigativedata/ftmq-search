@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-packages = [{include = "ftmq_search"}]
+packages = [{ include = "ftmq_search" }]
 
 [tool.poetry.scripts]
 ftmqs = "ftmq_search.cli:cli"
@@ -26,8 +26,9 @@ ftmqs = "ftmq_search.cli:cli"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4"
-ftmq = "^0.6.12"
+ftmq = "^0.6.14"
 structlog = "^24.4.0"
+elasticsearch = "^8.15.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.4.3,<9.0.0"
@@ -48,7 +49,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-env = [
-    "DEBUG=1",
-    "NOMENKLATURA_STATEMENT_TABLE=test_table",
-]
+env = ["DEBUG=1"]
