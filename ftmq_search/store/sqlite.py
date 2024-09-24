@@ -7,7 +7,6 @@ from typing import Iterable
 
 import orjson
 from ftmq.query import Q
-from ftmq.types import CE
 from normality import normalize
 from pydantic import ConfigDict
 from sqlalchemy import Column, MetaData, Table, Text, Unicode, insert, or_, select, text
@@ -23,7 +22,7 @@ settings = Settings()
 
 log = get_logger(__name__)
 
-KEY_LEN = 255
+KEY_LEN = 512
 VALUE_LEN = 65535
 
 
@@ -122,6 +121,7 @@ class SQliteStore(BaseStore):
                 raise e
 
     def flush(self):
+        log.info(f"Indexing {len(self.buffer)} proxies ...", uri=self.uri)
         conn = self.engine.connect()
         tx = conn.begin()
         if self.buffer:
@@ -144,21 +144,12 @@ class SQliteStore(BaseStore):
                 to_array(doc.countries),
                 doc.caption,
                 to_array(doc.names),
-                doc.proxy.model_dump_json(),
+                doc.proxy.model_dump_json(by_alias=True),
             )
         )
         self.fts_buffer.append((doc.id, doc.text))
         for name in doc.names:
             self.names_buffer.append((doc.id, name))
-        if len(self.buffer) == 10_000:
-            log.info("Indexing 10000 proxies", uri=self.uri)
-            self.flush()
-
-    def build(self, proxies: Iterable[CE]) -> int:
-        res = super().build(proxies)
-        log.info(f"Indexing {len(self.buffer)} proxies", uri=self.uri)
-        self.flush()
-        return res
 
     def search(self, q: str, query: Q | None = None) -> Iterable[EntitySearchResult]:
         # FIXME

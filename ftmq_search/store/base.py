@@ -4,13 +4,10 @@ from anystore.mixins import BaseModel
 from ftmq.query import Q
 from ftmq.types import CE
 
-from ftmq_search.logging import get_logger
 from ftmq_search.model import AutocompleteResult, EntityDocument, EntitySearchResult
 from ftmq_search.settings import Settings
 
 settings = Settings()
-
-log = get_logger(__name__)
 
 
 class BaseStore(BaseModel):
@@ -20,6 +17,9 @@ class BaseStore(BaseModel):
     name_props: list[str] = settings.name_props
 
     def put(self, doc: EntityDocument) -> None:
+        raise NotImplementedError
+
+    def flush(self) -> None:
         raise NotImplementedError
 
     def build(self, proxies: Iterable[CE]) -> int:
@@ -35,7 +35,8 @@ class BaseStore(BaseModel):
                     )
                 )
             if ix % 10_000 == 0:
-                log.info(f"Loading proxy `{ix}` ...", uri=self.uri)
+                self.flush()
+        self.flush()
         return ix
 
     def search(self, q: str, query: Q | None = None) -> Iterable[EntitySearchResult]:
