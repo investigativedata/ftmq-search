@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ftmq-search"
 version = "0.0.1"
-description = "followthemoney search based on ftmq"
+description = "followthemoney data search experiments based on ftmq"
 authors = ["Simon Wörpel <simon.woerpel@pm.me>"]
 license = "AGPL"
 readme = "README.md"
@@ -14,6 +14,7 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 packages = [{ include = "ftmq_search" }]
 
@@ -26,7 +27,7 @@ ftmqs = "ftmq_search.cli:cli"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4"
-ftmq = "^0.6.14"
+ftmq = "^0.7.0"
 structlog = "^24.4.0"
 elasticsearch = "^8.15.0"
 
