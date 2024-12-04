@@ -58,11 +58,15 @@ def cli_transform(
     """
     with ErrorHandler():
         with smart_open(out_uri, "wb") as fh:
-            for proxy in smart_read_proxies(in_uri):
+            ix = 0
+            for ix, proxy in enumerate(smart_read_proxies(in_uri), 1):
                 if proxy.schema.is_a("Thing"):
                     data = EntityDocument.from_proxy(proxy)
                     content = data.model_dump_json(by_alias=True)
                     fh.write(content.encode() + b"\n")
+                if ix % 10_000 == 0:
+                    console.print(f"Transformed {ix} proxies ...")
+    console.print(f"Transformed {ix} proxies completed.")
 
 
 @cli.command("index")

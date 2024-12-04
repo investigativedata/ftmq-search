@@ -13,14 +13,6 @@ def test_transform(donations):
             "countries": [],
             "names": ["MLPD"],
             "text": "MLPD",
-            "proxy": {
-                "id": "6d03aec76fdeec8f9697d8b19954ab6fc2568bc8",
-                "caption": "MLPD",
-                "schema": "Organization",
-                "properties": {"name": ["MLPD"]},
-                "datasets": ["donations"],
-                "referents": [],
-            },
         }
 
         tested = True

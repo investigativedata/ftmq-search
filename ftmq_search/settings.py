@@ -10,7 +10,6 @@ class Settings(BaseSettings):
     uri: str = "sqlite:///ftmqs.store"
     yaml_uri: str | None = None
     json_uri: str | None = None
-    display_props: list[str] = []
     index_props: list[str] = []
     name_props: list[str] = []
 

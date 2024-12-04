@@ -5,7 +5,6 @@ SQlite FTS5
 from functools import cache
 from typing import Iterable
 
-import orjson
 from ftmq.query import Q
 from normality import normalize
 from pydantic import ConfigDict
@@ -43,7 +42,6 @@ def make_table(name: str = settings.sql_table_name) -> Table:
         Column("countries", Unicode(KEY_LEN), index=True, nullable=False),
         Column("caption", Unicode(VALUE_LEN), index=True, nullable=False),
         Column("names", Unicode(VALUE_LEN), index=True, nullable=False),
-        Column("proxy", Text, nullable=False),
     )
 
 
@@ -88,7 +86,7 @@ class SQliteStore(BaseStore):
     fts_table: Table
     engine: Engine
 
-    buffer: list[tuple[str, str, str, str, str, str, str]] = []
+    buffer: list[tuple[str, str, str, str, str, str]] = []
     fts_buffer: list[tuple[str, str]] = []
     names_buffer: list[tuple[str, str]] = []
 
@@ -144,12 +142,13 @@ class SQliteStore(BaseStore):
                 to_array(doc.countries),
                 doc.caption,
                 to_array(doc.names),
-                doc.proxy.model_dump_json(by_alias=True),
             )
         )
         self.fts_buffer.append((doc.id, doc.text))
         for name in doc.names:
             self.names_buffer.append((doc.id, name))
+        if len(self.buffer) == 10_000:
+            self.flush()
 
     def search(self, q: str, query: Q | None = None) -> Iterable[EntitySearchResult]:
         # FIXME
@@ -184,8 +183,7 @@ class SQliteStore(BaseStore):
                 res["datasets"] = from_array(res["datasets"])
                 res["names"] = from_array(res["names"])
                 res["countries"] = from_array(res["countries"])
-                res["proxy"] = orjson.loads(res["proxy"])
-                yield EntitySearchResult(score=score, **res)
+                yield EntitySearchResult(score=score * -1, **res)
 
     def autocomplete(self, q: str) -> Iterable[AutocompleteResult]:
         q = normalize(q, lowercase=False) or ""

@@ -1,25 +1,16 @@
-from typing import Self
+from typing import Any, Iterable, Self
 
+from banal import ensure_list
 from followthemoney.types import registry
 from followthemoney.util import join_text
 from ftmq.model import Entity
 from ftmq.types import CE
-from ftmq.util import get_dehydrated_proxy, make_proxy
 from pydantic import BaseModel, ConfigDict, Field
 
 from ftmq_search.exceptions import IntegrityError
 from ftmq_search.settings import Settings
 
 settings = Settings()
-
-
-def get_display_proxy(
-    proxy: CE, display_props: list[str] = settings.display_props
-) -> Entity:
-    dehydrated = get_dehydrated_proxy(proxy)
-    for prop in display_props:
-        dehydrated.add(prop, proxy.get(prop, quiet=True), quiet=True, cleaned=True)
-    return Entity.from_proxy(dehydrated)
 
 
 def get_names_values(proxy: CE, props: list[str] = settings.name_props) -> list[str]:
@@ -51,16 +42,11 @@ class EntityDocument(BaseModel):
     countries: list[str] = Field([], examples=[["de"]])
     names: list[str]
     text: str = ""
-    proxy: Entity
-
-    def as_proxy(self) -> CE:
-        return make_proxy(self.proxy.model_dump(by_alias=True))
 
     @classmethod
     def from_proxy(
         cls,
         proxy: CE,
-        display_props: list[str] = settings.display_props,
         index_props: list[str] = settings.index_props,
         name_props: list[str] = settings.name_props,
     ) -> Self:
@@ -78,7 +64,6 @@ class EntityDocument(BaseModel):
             caption=proxy.caption,
             names=names,
             text=text,
-            proxy=get_display_proxy(proxy, display_props),
         )
 
 
@@ -86,6 +71,30 @@ class EntitySearchResult(BaseModel):
     id: str = Field(..., examples=["NK-A7z...."])
     proxy: Entity
     score: float = 1
+
+    def __init__(self, /, **data: Any) -> None:
+        if "proxy" not in data:
+            data["proxy"] = self.make_entity(**data)
+        super().__init__(**data)
+
+    @staticmethod
+    def make_entity(
+        id: str,
+        schema: str,
+        datasets: Iterable[str],
+        caption: str,
+        names: Iterable[str],
+        countries: Iterable[str] | None = None,
+        **kwargs: Any,
+    ) -> Entity:
+        return Entity(
+            id=id,
+            schema=schema,
+            datasets=list(datasets),
+            caption=caption,
+            properties={"name": list(names), "country": ensure_list(countries)},
+            referents=[],
+        )
 
 
 class AutocompleteResult(BaseModel):

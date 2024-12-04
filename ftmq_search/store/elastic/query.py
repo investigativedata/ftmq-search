@@ -15,7 +15,13 @@ def build_query(q: str, query: Query | None) -> dict[str, Any]:
     return {
         "bool": {
             "filter": filters,
-            "must": {"query_string": {"default_field": "text", "query": q}},
+            "must": {
+                "query_string": {
+                    "default_field": "text",
+                    "default_operator": "AND",
+                    "query": q,
+                }
+            },
         }
     }
 

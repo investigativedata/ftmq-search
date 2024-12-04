@@ -5,7 +5,6 @@ Elasticsearch (and hopefully OpenSearch)
 from functools import cache
 from typing import Any, Iterable
 
-import orjson
 from elasticsearch import ApiError, Elasticsearch
 from elasticsearch.helpers import BulkIndexError, bulk
 from ftmq.query import Q
@@ -47,7 +46,7 @@ class ElasticStore(BaseStore):
         uri = data.get("uri", base_settings.uri)
         data["engine"] = create_engine(uri, settings.user, settings.password)
         super().__init__(**data)
-        self.init()
+        # self.init()
 
     def flush(self):
         log.info(
@@ -63,14 +62,16 @@ class ElasticStore(BaseStore):
 
     def put(self, doc: EntityDocument):
         source = doc.model_dump(by_alias=True)
-        source["proxy"] = orjson.dumps(source["proxy"]).decode()  # FIXME
         self.buffer.append({"_id": doc.id, "_index": self.index, "_source": source})
+        if len(self.buffer) == 10_000:
+            self.flush()
 
     def search(self, q: str, query: Q | None = None) -> Iterable[EntitySearchResult]:
         res = self.engine.search(query=build_query(q, query), index=self.index)
         for hit in res["hits"]["hits"]:
-            proxy = orjson.loads(hit["_source"]["proxy"])
-            yield EntitySearchResult(id=hit["_id"], score=hit["_score"], proxy=proxy)
+            yield EntitySearchResult(
+                id=hit["_id"], score=hit["_score"], **hit["_source"]
+            )
 
     def autocomplete(self, q: str) -> Iterable[AutocompleteResult]:
         res = self.engine.search(query=build_autocomplete_query(q), index=self.index)
@@ -88,12 +89,12 @@ class ElasticStore(BaseStore):
             log.info("Create index", uri=self.uri, index=self.index)
         except ApiError as exc:
             if exc.error == "resource_already_exists_exception":
-                log.info("Index already exists.", uri=self.uri, index=self.index)
+                log.debug("Index already exists.", uri=self.uri, index=self.index)
                 return
             raise ElasticError(f"Could not create index: {exc}") from exc
 
     def make_logstash(self) -> str:
         return (
-            'input { stdin { } } output { elasticsearch { hosts => ["%s"] } }'
-            % self.uri
+            'input { stdin { } } output { elasticsearch { hosts => ["%s"] index => "%s" } }'
+            % (self.uri, self.index)
         )

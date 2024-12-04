@@ -33,8 +33,6 @@ def make_field(type_: str, format_: Optional[str] = None) -> MappingProperty:
 
 
 KEYWORD_FIELD = {"type": "keyword"}
-# PROXY_FIELD = {"type": "object", "index": False}
-PROXY_FIELD = {"type": "text"}
 
 
 @cache
@@ -47,10 +45,11 @@ def make_mapping() -> Dict[str, Any]:
         "datasets": KEYWORD_FIELD,
         "countries": KEYWORD_FIELD,
         "text": make_field("text"),
-        "proxy": PROXY_FIELD,
     }
     return {
         "dynamic": "strict",
         "properties": properties,
-        "_source": {"includes": ["proxy", "names"]},
+        "_source": {
+            "includes": ["schema", "caption", "datasets", "countries", "names"]
+        },
     }
