@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ftmq-search"
 version = "0.0.1"
-description = "followthemoney search based on ftmq"
+description = "followthemoney data search experiments based on ftmq"
 authors = ["Simon Wörpel <simon.woerpel@pm.me>"]
 license = "AGPL"
 readme = "README.md"
@@ -14,8 +14,9 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
-packages = [{include = "ftmq_search"}]
+packages = [{ include = "ftmq_search" }]
 
 [tool.poetry.scripts]
 ftmqs = "ftmq_search.cli:cli"
@@ -26,12 +27,13 @@ ftmqs = "ftmq_search.cli:cli"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4"
-ftmq = "^0.6.12"
+ftmq = "^0.7.0"
 structlog = "^24.4.0"
+elasticsearch = "^8.15.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.4.3,<9.0.0"
-pytest-cov = ">=4.1,<6.0"
+pytest-cov = ">=4.1,<7.0"
 black = ">=23.11,<25.0"
 isort = "^5.12.0"
 mypy = "^1.7.0"
@@ -48,7 +50,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-env = [
-    "DEBUG=1",
-    "NOMENKLATURA_STATEMENT_TABLE=test_table",
-]
+env = ["DEBUG=1"]

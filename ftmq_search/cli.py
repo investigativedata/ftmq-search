@@ -11,9 +11,12 @@ from ftmq_search import __version__
 from ftmq_search.model import EntityDocument
 from ftmq_search.settings import Settings
 from ftmq_search.store import get_store
+from ftmq_search.store.elastic.mapping import make_mapping
 
 settings = Settings()
 cli = typer.Typer(no_args_is_help=True, pretty_exceptions_enable=settings.debug)
+cli_elastic = typer.Typer(no_args_is_help=True)
+cli.add_typer(cli_elastic, name="elastic")
 console = Console(stderr=True)
 
 state = {"uri": settings.uri, "store": get_store()}
@@ -55,11 +58,15 @@ def cli_transform(
     """
     with ErrorHandler():
         with smart_open(out_uri, "wb") as fh:
-            for proxy in smart_read_proxies(in_uri):
+            ix = 0
+            for ix, proxy in enumerate(smart_read_proxies(in_uri), 1):
                 if proxy.schema.is_a("Thing"):
                     data = EntityDocument.from_proxy(proxy)
                     content = data.model_dump_json(by_alias=True)
                     fh.write(content.encode() + b"\n")
+                if ix % 10_000 == 0:
+                    console.print(f"Transformed {ix} proxies ...")
+    console.print(f"Transformed {ix} proxies completed.")
 
 
 @cli.command("index")
@@ -96,3 +103,35 @@ def cli_autocomplete(q: str, out_uri: Annotated[str, typer.Option("-o")] = "-"):
             for res in state["store"].autocomplete(q):
                 content = res.model_dump_json()
                 fh.write(content.encode() + b"\n")
+
+
+@cli_elastic.command("init")
+def cli_elastic_init():
+    """
+    Setup elasticsearch index
+    """
+    with ErrorHandler():
+        state["store"].init()
+
+
+@cli_elastic.command("mapping")
+def cli_elastic_mapping(out_uri: Annotated[str, typer.Option("-o")] = "-"):
+    """
+    Print elasticsearch mapping
+    """
+    with ErrorHandler():
+        with smart_open(out_uri, "wb") as fh:
+            content = make_mapping()
+            content = orjson.dumps(content, option=orjson.OPT_APPEND_NEWLINE)
+            fh.write(content)
+
+
+@cli_elastic.command("logstash")
+def cli_elastic_logstash(out_uri: Annotated[str, typer.Option("-o")] = "-"):
+    """
+    Print logstash config
+    """
+    with ErrorHandler():
+        with smart_open(out_uri, "wb") as fh:
+            content = state["store"].make_logstash()
+            fh.write(content.encode() + b"\n")
