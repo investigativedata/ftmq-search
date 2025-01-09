@@ -12,7 +12,6 @@ settings = Settings()
 
 class BaseStore(BaseModel):
     uri: str = settings.uri
-    display_props: list[str] = settings.display_props
     index_props: list[str] = settings.index_props
     name_props: list[str] = settings.name_props
 
@@ -29,7 +28,6 @@ class BaseStore(BaseModel):
                 self.put(
                     EntityDocument.from_proxy(
                         proxy,
-                        display_props=self.display_props,
                         index_props=self.index_props,
                         name_props=self.name_props,
                     )

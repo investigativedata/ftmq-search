@@ -6,6 +6,7 @@ from anystore.util import ensure_uri
 from ftmq_search.logging import get_logger
 from ftmq_search.settings import Settings
 from ftmq_search.store.base import BaseStore
+from ftmq_search.store.elastic.store import ElasticStore
 from ftmq_search.store.sqlite import SQliteStore
 
 log = get_logger(__name__)
@@ -27,4 +28,6 @@ def get_store(**kwargs) -> BaseStore:
     parsed = urlparse(uri)
     if parsed.scheme == "sqlite":
         return SQliteStore(uri=uri, **kwargs)
+    if parsed.scheme in ("http", "https"):
+        return ElasticStore(uri=uri, **kwargs)
     raise NotImplementedError(f"Store scheme: `{parsed.scheme}`")
