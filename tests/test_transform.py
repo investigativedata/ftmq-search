@@ -1,7 +1,10 @@
+from ftmq.io import orjson, smart_stream
+
 from ftmq_search.model import EntityDocument
+from ftmq_search.worker import transform
 
 
-def test_transform(donations):
+def test_transform(fixtures_path, tmp_path, donations):
     tested = False
     for proxy in donations:
         data = EntityDocument.from_proxy(proxy)
@@ -18,3 +21,12 @@ def test_transform(donations):
         tested = True
         break
     assert tested
+
+    # use the worker
+    out = tmp_path / "transformed.json"
+    res = transform(fixtures_path / "donations.ijson", out)
+    assert res.done == 184
+    transformed = [d for d in smart_stream(out)]
+    assert len(transformed) == 184
+    data = orjson.loads(transformed[0])
+    assert "donations" in EntityDocument(**data).datasets

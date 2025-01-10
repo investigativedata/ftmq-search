@@ -2,36 +2,26 @@ from typing import Annotated, Optional
 
 import orjson
 import typer
+from anystore.cli import ErrorHandler
 from anystore.io import smart_open, smart_stream
-from ftmq.io import smart_read_proxies
 from rich import print
 from rich.console import Console
 
 from ftmq_search import __version__
+from ftmq_search.logging import configure_logging
 from ftmq_search.model import EntityDocument
-from ftmq_search.settings import Settings
+from ftmq_search.settings import DEBUG, Settings
 from ftmq_search.store import get_store
 from ftmq_search.store.elastic.mapping import make_mapping
+from ftmq_search.worker import transform
 
 settings = Settings()
-cli = typer.Typer(no_args_is_help=True, pretty_exceptions_enable=settings.debug)
+cli = typer.Typer(no_args_is_help=True, pretty_exceptions_enable=DEBUG)
 cli_elastic = typer.Typer(no_args_is_help=True)
 cli.add_typer(cli_elastic, name="elastic")
 console = Console(stderr=True)
 
 state = {"uri": settings.uri, "store": get_store()}
-
-
-class ErrorHandler:
-    def __enter__(self):
-        pass
-
-    def __exit__(self, e, msg, _):
-        if e is not None:
-            if settings.debug:
-                raise e
-            console.print(f"[red][bold]{e.__name__}[/bold]: {msg}[/red]")
-            raise typer.Exit(code=1)
 
 
 @cli.callback(invoke_without_command=True)
@@ -44,6 +34,7 @@ def cli_ftmqs(
     if version:
         print(__version__)
         raise typer.Exit()
+    configure_logging()
     state["uri"] = uri or settings.uri
     state["store"] = get_store(uri=state["uri"])
 
@@ -57,16 +48,8 @@ def cli_transform(
     Create search documents from a stream of followthemoney entities
     """
     with ErrorHandler():
-        with smart_open(out_uri, "wb") as fh:
-            ix = 0
-            for ix, proxy in enumerate(smart_read_proxies(in_uri), 1):
-                if proxy.schema.is_a("Thing"):
-                    data = EntityDocument.from_proxy(proxy)
-                    content = data.model_dump_json(by_alias=True)
-                    fh.write(content.encode() + b"\n")
-                if ix % 10_000 == 0:
-                    console.print(f"Transformed {ix} proxies ...")
-    console.print(f"Transformed {ix} proxies completed.")
+        res = transform(in_uri, out_uri)
+        console.print(f"Transformed {res.done} proxies completed.")
 
 
 @cli.command("index")

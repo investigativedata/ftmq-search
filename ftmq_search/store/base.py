@@ -6,14 +6,13 @@ from ftmq.types import CE
 
 from ftmq_search.model import AutocompleteResult, EntityDocument, EntitySearchResult
 from ftmq_search.settings import Settings
+from ftmq_search.worker import index
 
 settings = Settings()
 
 
 class BaseStore(BaseModel):
     uri: str = settings.uri
-    index_props: list[str] = settings.index_props
-    name_props: list[str] = settings.name_props
 
     def put(self, doc: EntityDocument) -> None:
         raise NotImplementedError
@@ -22,20 +21,8 @@ class BaseStore(BaseModel):
         raise NotImplementedError
 
     def build(self, proxies: Iterable[CE]) -> int:
-        ix = 0
-        for ix, proxy in enumerate(proxies, 1):
-            if proxy.schema.is_a("Thing"):
-                self.put(
-                    EntityDocument.from_proxy(
-                        proxy,
-                        index_props=self.index_props,
-                        name_props=self.name_props,
-                    )
-                )
-            if ix % 10_000 == 0:
-                self.flush()
-        self.flush()
-        return ix
+        res = index(proxies, self)
+        return res.done
 
     def search(self, q: str, query: Q | None = None) -> Iterable[EntitySearchResult]:
         raise NotImplementedError

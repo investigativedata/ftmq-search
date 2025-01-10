@@ -1,3 +1,4 @@
+from anystore.settings import Settings as AnySettings
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -26,3 +27,6 @@ class ElasticSettings(BaseSettings):
     password: str = ""
     sniff: bool = False
     query_concurrency: int = 5
+
+
+DEBUG = AnySettings().debug
