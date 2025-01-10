@@ -4,6 +4,7 @@ from logging import Filter, LogRecord
 from typing import Any, Dict, List
 
 import structlog
+from anystore.settings import Settings
 from structlog.contextvars import merge_contextvars
 from structlog.dev import ConsoleRenderer, set_exc_info
 from structlog.processors import (
@@ -21,15 +22,17 @@ from structlog.stdlib import (
 )
 from structlog.stdlib import get_logger as get_raw_logger
 
-from ftmq_search import settings
+settings = Settings()
 
 
 def get_logger(name: str, *args, **kwargs) -> BoundLogger:
     return get_raw_logger(name, *args, **kwargs)
 
 
-def configure_logging(level: int = logging.INFO) -> None:
+def configure_logging(level: int | str | None = logging.INFO) -> None:
     """Configure log levels and structured logging"""
+    if isinstance(level, str):
+        level = level.upper()
     shared_processors: List[Any] = [
         add_log_level,
         add_logger_name,
@@ -42,7 +45,7 @@ def configure_logging(level: int = logging.INFO) -> None:
         UnicodeDecoder(),
     ]
 
-    if settings.LOG_JSON:
+    if settings.log_json:
         shared_processors.append(format_exc_info)
         shared_processors.append(format_json)
         formatter = ProcessorFormatter(
@@ -71,20 +74,9 @@ def configure_logging(level: int = logging.INFO) -> None:
         logger_factory=LoggerFactory(),
     )
 
-    es_logger = logging.getLogger("elastic_transport")
-    es_logger.setLevel(logging.WARNING)
-
-    uv_logger = logging.getLogger("uvicorn")
-    uv_logger.handlers = []
-
-    uv_access = logging.getLogger("uvicorn.access")
-    uv_access.handlers = []
-    uv_access.setLevel(logging.WARNING)
-    uv_access.propagate = True
-
-    # handler for low level logs that should be sent to STDOUT
-    out_handler = logging.StreamHandler(sys.stdout)
-    out_handler.setLevel(level)
+    # handler for low level logs that should be sent to STDERR
+    out_handler = logging.StreamHandler(sys.stderr)
+    out_handler.setLevel(level or settings.log_level.upper())
     out_handler.addFilter(_MaxLevelFilter(logging.WARNING))
     out_handler.setFormatter(formatter)
     # handler for high level logs that should be sent to STDERR
@@ -93,7 +85,7 @@ def configure_logging(level: int = logging.INFO) -> None:
     error_handler.setFormatter(formatter)
 
     root_logger = logging.getLogger()
-    root_logger.setLevel(settings.LOG_LEVEL)
+    root_logger.setLevel(settings.log_level.upper())
     root_logger.addHandler(out_handler)
     root_logger.addHandler(error_handler)
 
