@@ -13,4 +13,4 @@ def fixtures_path():
 
 @pytest.fixture(scope="module")
 def donations():
-    return smart_read_proxies(FIXTURES_PATH / "donations.ijson")
+    return [p for p in smart_read_proxies(FIXTURES_PATH / "donations.ijson")]

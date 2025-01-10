@@ -1,11 +1,16 @@
+import time
+
 from ftmq.query import Query
 
 from ftmq_search.store import get_store
 from ftmq_search.store.base import BaseStore
+from ftmq_search.store.elastic.store import ElasticStore
 
 
 def _test_store(donations, store: BaseStore):
     store.build(donations)
+    if isinstance(store, ElasticStore):
+        time.sleep(5)  # let index breath a bit
     res = [r for r in store.search("metall")]
     assert len(res) == 3
     assert res[0].id == "62ad0fe6f56dbbf6fee57ce3da76e88c437024d5"
@@ -50,5 +55,7 @@ def test_store_sqlite(donations, tmp_path):
 
 
 def test_store_elastic(donations):
-    store = get_store(uri="http://localhost:9200")
+    index = f"pytest-{time.time()}"
+    store = get_store(uri="http://localhost:9200", index=index)
+    store.init()
     assert _test_store(donations, store)

@@ -3,6 +3,7 @@ from typing import Any, Iterable, Self
 from banal import ensure_list
 from followthemoney.types import registry
 from followthemoney.util import join_text
+from ftmq import Query
 from ftmq.model import Entity
 from ftmq.types import CE
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,24 +13,7 @@ from ftmq_search.settings import Settings
 
 settings = Settings()
 
-
-def get_names_values(proxy: CE, props: list[str] = settings.name_props) -> list[str]:
-    if not props:
-        return proxy.get_type_values(registry.name)
-    names = []
-    for prop in props:
-        names.extend(proxy.get(prop, quiet=True))
-    return names
-
-
-def get_index_values(proxy: CE, props: list[str] = settings.index_props) -> list[str]:
-    if not props:
-        props = proxy.schema.featured
-    values = []
-    for prop in props:
-        values.extend(proxy.get(prop, quiet=True))
-    values.extend(proxy.get_type_values(registry.identifier))
-    return values
+ALLTHETHINGS = Query().where(schema="Thing", include_descendants=True)
 
 
 class EntityDocument(BaseModel):
@@ -44,18 +28,13 @@ class EntityDocument(BaseModel):
     text: str = ""
 
     @classmethod
-    def from_proxy(
-        cls,
-        proxy: CE,
-        index_props: list[str] = settings.index_props,
-        name_props: list[str] = settings.name_props,
-    ) -> Self:
+    def from_proxy(cls, proxy: CE) -> Self:
         if proxy.id is None:
             raise IntegrityError("Entity has no ID!")
-        names = get_names_values(proxy, name_props)
-        index = get_index_values(proxy, index_props)
-        texts = set(names + index)
-        text = join_text(*texts) or ""
+        names = proxy.get_type_values(registry.name)
+        text = join_text(*[v for values in proxy.properties.values() for v in values])
+        text = text or ""
+
         return cls(
             id=proxy.id,
             datasets=list(proxy.datasets),
