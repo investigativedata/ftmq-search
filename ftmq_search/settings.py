@@ -17,11 +17,8 @@ class ElasticSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="elastic_")
 
     index: str = "ftmqs"
-    cloud_id: str = ""
     user: str = ""
     password: str = ""
-    sniff: bool = False
-    query_concurrency: int = 5
 
 
 DEBUG = AnySettings().debug
