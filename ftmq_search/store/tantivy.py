@@ -94,9 +94,9 @@ class TantivyStore(BaseStore):
         stmt = q
         if query is not None:
             if query.dataset_names:
-                stmt += f" AND {or_("datasets", query.dataset_names)}"
+                stmt += f' AND {or_("datasets", query.dataset_names)}'
             if query.schemata_names:
-                stmt += f" AND {or_("schema", query.schemata_names)}"
+                stmt += f' AND {or_("schema", query.schemata_names)}'
             if query.countries:
-                stmt += f" AND {or_("countries", query.countries)}"
+                stmt += f' AND {or_("countries", query.countries)}'
         return self.index.parse_query(stmt)
