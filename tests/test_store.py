@@ -1,3 +1,4 @@
+import os
 import time
 
 from ftmq.query import Query
@@ -57,6 +58,17 @@ def test_store_sqlite(donations, tmp_path):
 
 def test_store_elastic(donations):
     index = f"pytest-{time.time()}"
-    store = get_store(uri="http://localhost:9200", index=index)
+    es_uri = os.environ.get("ELASTICSEARCH_URI", "http://localhost:9200")
+    store = get_store(uri=es_uri, index=index)
     store.init()
+    assert _test_store(donations, store)
+
+
+def test_store_tantivy(donations, tmp_path):
+    store = get_store(uri=f"tantivy://{tmp_path / "tantivy.db"}")
+    assert _test_store(donations, store)
+
+
+def test_store_memory(donations):
+    store = get_store(uri="memory:///")
     assert _test_store(donations, store)

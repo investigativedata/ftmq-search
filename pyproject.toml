@@ -15,10 +15,10 @@ classifiers = [
 ]
 requires-python = ">=3.11,<4"
 dependencies = [
-    "anystore (>=0.2.2,<0.3.0)",
-    "ftmq (>=0.7.1,<0.8.0)",
+    "ftmq @ git+https://github.com/investigativedata/ftmq.git@develop",
     "pydantic-settings (>=2.7.1,<3.0.0)",
-    "elasticsearch (>=8.17.0,<9.0.0)"
+    "elasticsearch (>=8.17.0,<9.0.0)",
+    "tantivy (>=0.22.0,<0.23.0)"
 
 ]
 
@@ -45,6 +45,10 @@ cloudpickle = ">=2.2.1,<4.0.0"
 pytest-env = "^1.1.1"
 bump-pydantic = ">=0.7,<0.9"
 
+
+[tool.poetry.dependencies]
+anystore = {develop = true}
+ftmq = {develop = true}
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
