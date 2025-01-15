@@ -5,7 +5,7 @@ from followthemoney.types import registry
 from followthemoney.util import join_text
 from ftmq import Query
 from ftmq.model import Entity
-from ftmq.types import CE
+from ftmq.types import CE, SE
 from pydantic import BaseModel, ConfigDict, Field
 
 from ftmq_search.exceptions import IntegrityError
@@ -28,7 +28,7 @@ class EntityDocument(BaseModel):
     text: str = ""
 
     @classmethod
-    def from_proxy(cls, proxy: CE) -> Self:
+    def from_proxy(cls, proxy: CE | SE) -> Self:
         if proxy.id is None:
             raise IntegrityError("Entity has no ID!")
         names = proxy.get_type_values(registry.name)

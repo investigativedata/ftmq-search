@@ -14,7 +14,7 @@ from pydantic import ConfigDict
 from ftmq_search.exceptions import ElasticError
 from ftmq_search.logging import get_logger
 from ftmq_search.model import AutocompleteResult, EntityDocument, EntitySearchResult
-from ftmq_search.settings import DEBUG, ElasticSettings, Settings
+from ftmq_search.settings import ElasticSettings, Settings
 from ftmq_search.store.base import BaseStore
 from ftmq_search.store.elastic.mapping import ANALYSIS_SETTINGS, make_mapping
 from ftmq_search.store.elastic.query import build_autocomplete_query, build_query
@@ -49,13 +49,10 @@ class ElasticStore(BaseStore):
         # self.init()
 
     def flush(self):
-        log.info(
-            f"Indexing {len(self.buffer)} proxies ...", uri=self.uri, index=self.index
-        )
         try:
-            bulk(self.engine, self.buffer, stats_only=not DEBUG)
+            bulk(self.engine, self.buffer, stats_only=not base_settings.debug)
         except BulkIndexError as e:
-            if DEBUG:
+            if base_settings.debug:
                 raise e
             log.error(f"Indexing error: `{e}`", uri=self.uri, index=self.index)
         self.buffer = []
@@ -95,6 +92,6 @@ class ElasticStore(BaseStore):
 
     def make_logstash(self) -> str:
         return (
-            'input { stdin { } } output { elasticsearch { hosts => ["%s"] index => "%s" } }'
+            'input { stdin { } } output { elasticsearch { hosts => ["%s"] index => "%s" } }\n'
             % (self.uri, self.index)
         )

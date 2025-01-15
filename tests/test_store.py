@@ -2,13 +2,14 @@ import time
 
 from ftmq.query import Query
 
+from ftmq_search.logic import index_proxies
 from ftmq_search.store import get_store
 from ftmq_search.store.base import BaseStore
 from ftmq_search.store.elastic.store import ElasticStore
 
 
 def _test_store(donations, store: BaseStore):
-    store.build(donations)
+    index_proxies(donations, store)
     if isinstance(store, ElasticStore):
         time.sleep(5)  # let index breath a bit
     res = [r for r in store.search("metall")]

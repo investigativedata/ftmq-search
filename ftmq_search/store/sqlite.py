@@ -119,7 +119,6 @@ class SQliteStore(BaseStore):
                 raise e
 
     def flush(self):
-        log.info(f"Indexing {len(self.buffer)} proxies ...", uri=self.uri)
         conn = self.engine.connect()
         tx = conn.begin()
         if self.buffer:

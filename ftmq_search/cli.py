@@ -1,27 +1,31 @@
-from typing import Annotated, Optional
+from typing import Annotated, Iterable, Optional
 
-import orjson
 import typer
 from anystore.cli import ErrorHandler
-from anystore.io import smart_open, smart_stream
+from anystore.io import smart_write, smart_write_json
+from anystore.types import SDictGenerator
+from anystore.util import model_dump
+from pydantic import BaseModel
 from rich import print
-from rich.console import Console
 
 from ftmq_search import __version__
 from ftmq_search.logging import configure_logging
-from ftmq_search.model import EntityDocument
-from ftmq_search.settings import DEBUG, Settings
+from ftmq_search.logic import index, transform
+from ftmq_search.settings import Settings
 from ftmq_search.store import get_store
 from ftmq_search.store.elastic.mapping import make_mapping
-from ftmq_search.worker import transform
 
 settings = Settings()
-cli = typer.Typer(no_args_is_help=True, pretty_exceptions_enable=DEBUG)
+cli = typer.Typer(no_args_is_help=True, pretty_exceptions_enable=settings.debug)
 cli_elastic = typer.Typer(no_args_is_help=True)
 cli.add_typer(cli_elastic, name="elastic")
-console = Console(stderr=True)
 
 state = {"uri": settings.uri, "store": get_store()}
+
+
+def serialize(items: Iterable[BaseModel]) -> SDictGenerator:
+    for item in items:
+        yield model_dump(item)
 
 
 @cli.callback(invoke_without_command=True)
@@ -48,8 +52,7 @@ def cli_transform(
     Create search documents from a stream of followthemoney entities
     """
     with ErrorHandler():
-        res = transform(in_uri, out_uri)
-        console.print(f"Transformed {res.done} proxies completed.")
+        transform(in_uri, out_uri)
 
 
 @cli.command("index")
@@ -58,10 +61,7 @@ def cli_index(in_uri: Annotated[str, typer.Option("-i")] = "-"):
     Index a stream of search documents to a store
     """
     with ErrorHandler():
-        for line in smart_stream(in_uri):
-            doc = EntityDocument(**orjson.loads(line))
-            state["store"].put(doc)
-        state["store"].flush()
+        index(in_uri, state["store"])
 
 
 @cli.command("search")
@@ -70,10 +70,8 @@ def cli_search(q: str, out_uri: Annotated[str, typer.Option("-o")] = "-"):
     Simple search against the store
     """
     with ErrorHandler():
-        with smart_open(out_uri, "wb") as fh:
-            for res in state["store"].search(q):
-                content = res.model_dump_json(by_alias=True)
-                fh.write(content.encode() + b"\n")
+        res = serialize(state["store"].search(q))
+        smart_write_json(out_uri, res)
 
 
 @cli.command("autocomplete")
@@ -82,10 +80,8 @@ def cli_autocomplete(q: str, out_uri: Annotated[str, typer.Option("-o")] = "-"):
     Autocomplete based on entities captions
     """
     with ErrorHandler():
-        with smart_open(out_uri, "wb") as fh:
-            for res in state["store"].autocomplete(q):
-                content = res.model_dump_json()
-                fh.write(content.encode() + b"\n")
+        res = serialize(state["store"].autocomplete(q))
+        smart_write_json(out_uri, res)
 
 
 @cli_elastic.command("init")
@@ -103,10 +99,8 @@ def cli_elastic_mapping(out_uri: Annotated[str, typer.Option("-o")] = "-"):
     Print elasticsearch mapping
     """
     with ErrorHandler():
-        with smart_open(out_uri, "wb") as fh:
-            content = make_mapping()
-            content = orjson.dumps(content, option=orjson.OPT_APPEND_NEWLINE)
-            fh.write(content)
+        content = make_mapping()
+        smart_write_json(out_uri, [content])
 
 
 @cli_elastic.command("logstash")
@@ -115,6 +109,5 @@ def cli_elastic_logstash(out_uri: Annotated[str, typer.Option("-o")] = "-"):
     Print logstash config
     """
     with ErrorHandler():
-        with smart_open(out_uri, "wb") as fh:
-            content = state["store"].make_logstash()
-            fh.write(content.encode() + b"\n")
+        content = state["store"].make_logstash()
+        smart_write(out_uri, content)

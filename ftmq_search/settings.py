@@ -1,9 +1,11 @@
-from anystore.settings import Settings as AnySettings
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ftmqs_")
+
+    debug: bool = Field(alias="debug", default=False)
 
     uri: str = "sqlite:///ftmqs.store"
     yaml_uri: str | None = None
@@ -19,6 +21,3 @@ class ElasticSettings(BaseSettings):
     index: str = "ftmqs"
     user: str = ""
     password: str = ""
-
-
-DEBUG = AnySettings().debug
