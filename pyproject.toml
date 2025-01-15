@@ -1,41 +1,43 @@
-[tool.poetry]
+[project]
 name = "ftmq-search"
 version = "0.0.1"
-description = "followthemoney search based on ftmq"
-authors = ["Simon Wörpel <simon.woerpel@pm.me>"]
-license = "AGPL"
+description = "followthemoney data search experiments based on ftmq"
+authors = [{name="Simon Wörpel", email="simon.woerpel@pm.me"}]
+license = "AGPLv3+"
 readme = "README.md"
-homepage = "https://github.com/investigativedata/ftmq-search"
-repository = "https://github.com/investigativedata/ftmq-search"
-documentation = "https://github.com/investigativedata/ftmq-search"
 classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
-packages = [{include = "ftmq_search"}]
+requires-python = ">=3.11,<4"
+dependencies = [
+    "ftmq @ git+https://github.com/investigativedata/ftmq.git@develop",
+    "pydantic-settings (>=2.7.1,<3.0.0)",
+    "elasticsearch (>=8.17.0,<9.0.0)",
+    "tantivy (>=0.22.0,<0.23.0)"
 
-[tool.poetry.scripts]
+]
+
+[project.scripts]
 ftmqs = "ftmq_search.cli:cli"
 
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/investigativedata/ftmq-search/issues"
-
-
-[tool.poetry.dependencies]
-python = ">=3.11,<4"
-ftmq = "^0.6.10"
-structlog = "^24.4.0"
+[project.urls]
+Homepage = "https://github.com/investigativedata/ftmq-search"
+Repository = "https://github.com/investigativedata/ftmq-search"
+Documentation = "https://github.com/investigativedata/ftmq-search"
+Issues = "https://github.com/investigativedata/ftmq-search/issues"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.4.3,<9.0.0"
-pytest-cov = ">=4.1,<6.0"
+pytest-cov = ">=4.1,<7.0"
 black = ">=23.11,<25.0"
 isort = "^5.12.0"
 mypy = "^1.7.0"
-pre-commit = "^3.5.0"
+pre-commit = ">=3.5,<5.0"
 flake8 = ">=6.1,<8.0"
 ipdb = "^0.13.13"
 bump2version = "^1.0.1"
@@ -43,12 +45,13 @@ cloudpickle = ">=2.2.1,<4.0.0"
 pytest-env = "^1.1.1"
 bump-pydantic = ">=0.7,<0.9"
 
+
+[tool.poetry.dependencies]
+anystore = {develop = true}
+ftmq = {develop = true}
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-env = [
-    "DEBUG=1",
-    "NOMENKLATURA_STATEMENT_TABLE=test_table",
-]
+env = ["DEBUG=1"]
