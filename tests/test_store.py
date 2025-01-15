@@ -65,7 +65,7 @@ def test_store_elastic(donations):
 
 
 def test_store_tantivy(donations, tmp_path):
-    store = get_store(uri=f"tantivy://{tmp_path / "tantivy.db"}")
+    store = get_store(uri=f'tantivy://{tmp_path / "tantivy.db"}')
     assert _test_store(donations, store)
 
 
