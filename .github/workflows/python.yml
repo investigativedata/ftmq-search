@@ -60,8 +60,6 @@ jobs:
       - name: Lint with flake8
         run: make lint
       - name: Test with pytest
-        env:
-          ELASTICSEARCH_URI: http://localhost:9200
         run: make test
       - name: Test building
         run: poetry build

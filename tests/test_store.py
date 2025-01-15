@@ -58,8 +58,7 @@ def test_store_sqlite(donations, tmp_path):
 
 def test_store_elastic(donations):
     index = f"pytest-{time.time()}"
-    es_uri = os.environ.get("ELASTICSEARCH_URI", "http://localhost:9200")
-    store = get_store(uri=es_uri, index=index)
+    store = get_store(uri="http://localhost:9200", index=index)
     store.init()
     assert _test_store(donations, store)
 
